@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+   <head>
+    <title>
+        Hello world
+    </title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        *{
+            margin:0px;
+            padding:0px;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+        body{
+            font-family: sans-serif;
+            display:flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+           
+        }
+        .title{
+            margin:20px 0;
+        }
+        .main{
+            border:5px solid;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .name{
+            display: flex;
+            font-size: 32px;
+            font-weight: 700;
+            padding: 8px 16px;
+            color: green;
+            background-color: violet;
+        }
+
+        .name>span{
+            color: beige;
+        }
+        .name-input{
+            font-size: 24px;
+            font-weight:700 ;
+            color: green;
+            flex-grow: 1;
+            border: none;
+            margin: 0px 12px;
+            outline: none;
+            background-color: violet;
+            border-bottom:3px solid green;
+        }
+        .msg-container{
+            display: flex;
+            flex-direction: column;
+            background-color:yellow;
+            width: 400px;
+            height: 500px;
+            overflow-y: scroll;
+            overflow-x: hidden;
+
+        }
+        .msg-left,.msg-right{
+            list-style:none;
+            padding: 8px 12px;
+            margin:12px;
+            max-width: 250px;
+            font-size: 18px;
+            word-wrap: break-word;
+
+        }
+        .msg-left{
+            border-radius: 20px 20px 20px 0;
+            align-self: flex-start;
+            background-color: blueviolet ;
+        }
+        .msg-right{
+            border-radius: 20px 20px 0px 20px;
+            align-self: flex-end;
+            background-color:skyblue;
+        }
+        .msg-left>p>span,.msg-right>p>span{
+            display: block;
+            font-style: italic;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .fb{
+            font-style:italic;
+            font-size: 14px;
+            padding:0px 16px 16px 16px;
+            text-align: center;
+        }
+        .msg-form{
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            
+        }
+        .msg-input{
+            flex-grow: 1;
+            height: 48px;
+            font-size: 16px;
+            border: none;
+            outline: none;
+            padding: 0 12px;
+            background-color: darkgrey;
+        }
+        .send-btn{
+            height: 48px;
+            font-size: 16px;
+            border: none;
+            padding: 0 20px;
+            outline: none;
+            background-color: #ffff;
+            cursor: pointer;
+        }
+        .v-divider{
+            height: 48px;
+            width: 2px;
+            background-color: #f6f6f6;
+        }
+        .clientNo{
+            margin: 20px 0;
+            color: #e7e7e7;
+        }
+    </style>
+</head>
+   <script src="/socket.io/socket.io.js"></script>
+
+   <body>
+        <h1 class="title">Mass Chat</h1>
+        <div class="main">
+            <div class="name">
+                <span><i class="fa fa-user"></i></span>
+                <input 
+                type="text"
+                name="name" 
+                id="name-input" 
+                class="name-input" 
+                value="anonymous" maxlength="20">
+            </div>
+            <ul class="msg-container" id="msg-container">
+               
+                <li class="msg-fb">
+                    
+                </li>
+            </ul>
+            <form action="" id="msg-form" class="msg-form">
+                <input type="text" name="msg" id="msg-input" class="msg-input">
+                <div class="v-divider"></div>
+                <button type="submit" class="send-btn">send<span><i class="fas fa-paper-plane"></i></span></button>
+            </form>
+        </div>
+        <h3 class="clientsNo" id="clientsNo">total client:1</h3>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+        <script>
+            var socket = io();
+            const ct = document.getElementById('clientsNo')
+
+            const msgcon = document.getElementById('msg-container')
+            const nameinput = document.getElementById('name-input')
+            const msgform = document.getElementById('msg-form')
+            const msginput = document.getElementById('msg-input')
+             
+            var tone = new Audio("lovetrack.mp3")
+
+            msgform.addEventListener('submit',(e)=>{
+                e.preventDefault()
+                sendMessage()
+            })
+
+            socket.on('clients_No',(data)=>{
+              ct.innerHTML = `total clients:${data}`;
+            })
+
+            function sendMessage(){
+                if(msginput.value==='') 
+                    return
+                console.log(msginput.value)
+                const data = {
+                    name:nameinput.value,
+                    message:msginput.value,
+                    dateTime:new Date()
+                }
+                socket.emit('message',data)
+                addMessagetoUI(true,data)
+                msginput.value = ''
+
+            }
+            socket.on('chat',(data)=>{
+                console.log(data)
+                tone.play()
+                addMessagetoUI(false,data)
+            })
+
+            function addMessagetoUI(isownmsg,data){
+                clearfeedback()
+                const element = `<li class="${isownmsg?"msg-right":"msg-left"}">
+                    <p class="message">
+                        ${data.message}
+                        <span>${data.name} ${moment(data.dateTime).fromNow()}</span>
+                    </p>
+                </li>`
+
+                msgcon.innerHTML += element
+                scrolltobottom()
+            }
+            function scrolltobottom(){
+                msgcon.scrollTo(0,msgcon.scrollHeight)
+            }
+
+            msginput.addEventListener('focus',(e)=>{
+                socket.emit('feedback',{
+                    feedback:`${nameinput.value} is typing aa message`
+                })
+            })
+            msginput.addEventListener('keypress',(e)=>{
+                socket.emit('feedback',{
+                    feedback:`${nameinput.value} is typing aa message`
+                })               
+            })
+            msginput.addEventListener('blur',(e)=>{
+                socket.emit('feedback',{
+                    feedback:``
+                })
+            })
+            socket.on('feedback',(data)=>{
+                clearfeedback()
+                const element = `
+                <li class="msg-fb">
+                    <p class="fb" id="fb">
+                        ${data.feedback}
+                    </p>
+                </li>`
+                msgcon.innerHTML+=element
+            })
+
+            function clearfeedback(){
+                document.querySelectorAll("li.msg-fb").forEach(element=>{
+                    element.parentNode.removeChild(element)
+                })
+            }
+         </script>
+   </body>
+</html>
